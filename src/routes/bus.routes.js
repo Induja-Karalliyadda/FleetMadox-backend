@@ -12,20 +12,20 @@ import {
 
 const router = Router();
 
-// Get all buses
-router.get('/', authenticate, authorize('admin'), listBusesController);
+// ✅ IMPORTANT: Allow drivers to view buses (needed for BusSchedule)
+// Get all buses - Allow admin, accountant, and driver to view
+router.get('/', authenticate, authorize('admin', 'accountant', 'driver'), listBusesController);
 
-// Get bus by ID
-router.get('/:id', authenticate, authorize('admin'), getBusController);
+// Get bus by ID - Allow admin, accountant, and driver to view
+router.get('/:id', authenticate, authorize('admin', 'accountant', 'driver'), getBusController);
 
-// Create bus
+// Create bus - Admin only
 router.post('/', authenticate, authorize('admin'), validate(createBusSchema), createBusController);
 
-// ✅ Update bus (PUT)
+// Update bus (PUT) - Admin only
 router.put('/:id', authenticate, authorize('admin'), validate(updateBusSchema), updateBusController);
 
-
-// Delete bus
+// Delete bus - Admin only
 router.delete('/:id', authenticate, authorize('admin'), deleteBusController);
 
 export default router;
