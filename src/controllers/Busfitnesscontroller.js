@@ -1,7 +1,7 @@
 // Bus Fitness Controller
 // File: controllers/Busfitnesscontroller.js
 
-import * as busFitnessRepository from '../repositories/Busfitnessrepository.js';
+import * as busFitnessService from '../services/Busfitnessservice.js';
 
 // ==========================================
 // GET ALL FITNESS RECORDS
@@ -9,33 +9,24 @@ import * as busFitnessRepository from '../repositories/Busfitnessrepository.js';
 export const getAllFitnessRecords = async (req, res) => {
   try {
     const { page = 1, limit = 20, sortBy = 'check_date', order = 'DESC' } = req.query;
-    const offset = (page - 1) * limit;
     
-    const records = await busFitnessRepository.findAll({
-      limit: parseInt(limit),
-      offset: parseInt(offset),
+    const result = await busFitnessService.getAllFitnessRecords({
+      page,
+      limit,
       sortBy,
       order
     });
     
-    const total = await busFitnessRepository.count();
-    
     res.json({
       success: true,
-      data: records,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        totalPages: Math.ceil(total / limit)
-      }
+      data: result.records,
+      pagination: result.pagination
     });
   } catch (error) {
     console.error('Error fetching fitness records:', error);
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       success: false,
-      message: 'Failed to fetch fitness records',
-      error: error.message
+      message: error.message || 'Failed to fetch fitness records'
     });
   }
 };
@@ -47,14 +38,7 @@ export const getFitnessRecordsByDate = async (req, res) => {
   try {
     const { date } = req.params;
     
-    if (!date) {
-      return res.status(400).json({
-        success: false,
-        message: 'Date parameter is required'
-      });
-    }
-    
-    const records = await busFitnessRepository.findByDate(date);
+    const records = await busFitnessService.getFitnessRecordsByDate(date);
     
     res.json({
       success: true,
@@ -63,10 +47,10 @@ export const getFitnessRecordsByDate = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching fitness records by date:', error);
-    res.status(500).json({
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({
       success: false,
-      message: 'Failed to fetch fitness records',
-      error: error.message
+      message: error.message || 'Failed to fetch fitness records'
     });
   }
 };
@@ -79,7 +63,7 @@ export const getFitnessRecordsByBus = async (req, res) => {
     const { busId } = req.params;
     const { startDate, endDate } = req.query;
     
-    const records = await busFitnessRepository.findByBusId(busId, { startDate, endDate });
+    const records = await busFitnessService.getFitnessRecordsByBus(busId, { startDate, endDate });
     
     res.json({
       success: true,
@@ -88,10 +72,9 @@ export const getFitnessRecordsByBus = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching fitness records by bus:', error);
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       success: false,
-      message: 'Failed to fetch fitness records',
-      error: error.message
+      message: error.message || 'Failed to fetch fitness records'
     });
   }
 };
@@ -104,7 +87,7 @@ export const getBusHistoryWithDrivers = async (req, res) => {
     const { busId } = req.params;
     const { limit = 50 } = req.query;
     
-    const history = await busFitnessRepository.getBusHistoryWithDriverDetails(busId, parseInt(limit));
+    const history = await busFitnessService.getBusHistoryWithDrivers(busId, parseInt(limit));
     
     res.json({
       success: true,
@@ -113,10 +96,9 @@ export const getBusHistoryWithDrivers = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching bus history:', error);
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       success: false,
-      message: 'Failed to fetch bus history',
-      error: error.message
+      message: error.message || 'Failed to fetch bus history'
     });
   }
 };
@@ -128,7 +110,7 @@ export const getBusCheckStatus = async (req, res) => {
   try {
     const { date } = req.params;
     
-    const status = await busFitnessRepository.getBusCheckStatusByDate(date);
+    const status = await busFitnessService.getBusCheckStatus(date);
     
     res.json({
       success: true,
@@ -137,10 +119,9 @@ export const getBusCheckStatus = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching bus check status:', error);
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       success: false,
-      message: 'Failed to fetch bus check status',
-      error: error.message
+      message: error.message || 'Failed to fetch bus check status'
     });
   }
 };
@@ -151,21 +132,19 @@ export const getBusCheckStatus = async (req, res) => {
 export const getTodayAssignmentsWithStatus = async (req, res) => {
   try {
     const { date } = req.query;
-    const checkDate = date || new Date().toISOString().split('T')[0];
     
-    const assignments = await busFitnessRepository.getAssignmentsWithCheckStatus(checkDate);
+    const result = await busFitnessService.getTodayAssignmentsWithStatus(date);
     
     res.json({
       success: true,
-      data: assignments,
-      date: checkDate
+      data: result.assignments,
+      date: result.date
     });
   } catch (error) {
     console.error('Error fetching assignments with status:', error);
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       success: false,
-      message: 'Failed to fetch assignments',
-      error: error.message
+      message: error.message || 'Failed to fetch assignments'
     });
   }
 };
@@ -177,14 +156,7 @@ export const getFitnessRecordById = async (req, res) => {
   try {
     const { id } = req.params;
     
-    const record = await busFitnessRepository.findById(id);
-    
-    if (!record) {
-      return res.status(404).json({
-        success: false,
-        message: 'Fitness record not found'
-      });
-    }
+    const record = await busFitnessService.getFitnessRecordById(id);
     
     res.json({
       success: true,
@@ -192,10 +164,9 @@ export const getFitnessRecordById = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching fitness record:', error);
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       success: false,
-      message: 'Failed to fetch fitness record',
-      error: error.message
+      message: error.message || 'Failed to fetch fitness record'
     });
   }
 };
@@ -205,52 +176,9 @@ export const getFitnessRecordById = async (req, res) => {
 // ==========================================
 export const createFitnessRecord = async (req, res) => {
   try {
-    const {
-      assignment_id,
-      bus_id,
-      oil_level,
-      oil_checked,
-      water_level,
-      water_checked,
-      notes,
-      check_date
-    } = req.body;
+    const driverId = req.user.id;
     
-    // Get driver_id from authenticated user
-    const driver_id = req.user.id;
-    
-    // Validate required fields
-    if (!assignment_id || !bus_id) {
-      return res.status(400).json({
-        success: false,
-        message: 'Assignment ID and Bus ID are required'
-      });
-    }
-    
-    // Check if a fitness record already exists for this assignment on this date
-    const existingRecord = await busFitnessRepository.findByAssignmentAndDate(
-      assignment_id,
-      check_date || new Date().toISOString().split('T')[0]
-    );
-    
-    if (existingRecord) {
-      return res.status(409).json({
-        success: false,
-        message: 'Fitness check already submitted for this assignment today'
-      });
-    }
-    
-    const newRecord = await busFitnessRepository.create({
-      assignment_id,
-      driver_id,
-      bus_id,
-      oil_level: oil_level || 'full',
-      oil_checked: oil_checked !== undefined ? oil_checked : true,
-      water_level: water_level || 'full',
-      water_checked: water_checked !== undefined ? water_checked : true,
-      notes: notes || '',
-      check_date: check_date || new Date().toISOString().split('T')[0]
-    });
+    const newRecord = await busFitnessService.createFitnessRecord(req.body, driverId);
     
     res.status(201).json({
       success: true,
@@ -259,10 +187,9 @@ export const createFitnessRecord = async (req, res) => {
     });
   } catch (error) {
     console.error('Error creating fitness record:', error);
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       success: false,
-      message: 'Failed to create fitness record',
-      error: error.message
+      message: error.message || 'Failed to create fitness record'
     });
   }
 };
@@ -273,26 +200,8 @@ export const createFitnessRecord = async (req, res) => {
 export const updateFitnessRecord = async (req, res) => {
   try {
     const { id } = req.params;
-    const updates = req.body;
     
-    const existingRecord = await busFitnessRepository.findById(id);
-    
-    if (!existingRecord) {
-      return res.status(404).json({
-        success: false,
-        message: 'Fitness record not found'
-      });
-    }
-    
-    // Check if user is authorized to update (admin or the driver who created it)
-    if (req.user.role !== 'admin' && req.user.id !== existingRecord.driver_id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to update this record'
-      });
-    }
-    
-    const updatedRecord = await busFitnessRepository.update(id, updates);
+    const updatedRecord = await busFitnessService.updateFitnessRecord(id, req.body, req.user);
     
     res.json({
       success: true,
@@ -301,10 +210,9 @@ export const updateFitnessRecord = async (req, res) => {
     });
   } catch (error) {
     console.error('Error updating fitness record:', error);
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       success: false,
-      message: 'Failed to update fitness record',
-      error: error.message
+      message: error.message || 'Failed to update fitness record'
     });
   }
 };
@@ -316,16 +224,7 @@ export const deleteFitnessRecord = async (req, res) => {
   try {
     const { id } = req.params;
     
-    const existingRecord = await busFitnessRepository.findById(id);
-    
-    if (!existingRecord) {
-      return res.status(404).json({
-        success: false,
-        message: 'Fitness record not found'
-      });
-    }
-    
-    await busFitnessRepository.deleteRecord(id);
+    await busFitnessService.deleteFitnessRecord(id);
     
     res.json({
       success: true,
@@ -333,10 +232,9 @@ export const deleteFitnessRecord = async (req, res) => {
     });
   } catch (error) {
     console.error('Error deleting fitness record:', error);
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       success: false,
-      message: 'Failed to delete fitness record',
-      error: error.message
+      message: error.message || 'Failed to delete fitness record'
     });
   }
 };
@@ -348,7 +246,7 @@ export const getFitnessSummary = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
     
-    const summary = await busFitnessRepository.getSummaryStats({ startDate, endDate });
+    const summary = await busFitnessService.getFitnessSummary({ startDate, endDate });
     
     res.json({
       success: true,
@@ -356,10 +254,9 @@ export const getFitnessSummary = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching fitness summary:', error);
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       success: false,
-      message: 'Failed to fetch fitness summary',
-      error: error.message
+      message: error.message || 'Failed to fetch fitness summary'
     });
   }
 };
