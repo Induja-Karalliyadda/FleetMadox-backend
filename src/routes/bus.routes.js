@@ -1,7 +1,7 @@
-import { Router } from 'express';
-import { authenticate, authorize } from '../middlewares/auth.js';
-import { validate } from '../middlewares/validate.js';
-import { createBusSchema, updateBusSchema } from '../schemas/bus.schema.js';
+// Bus Routes
+// File: routes/bus.routes.js
+
+import express from 'express';
 import {
   listBusesController,
   getBusController,
@@ -9,23 +9,46 @@ import {
   updateBusController,
   deleteBusController
 } from '../controllers/bus.controller.js';
+import { authenticate, authorize } from '../middlewares/auth.js';
 
-const router = Router();
+const router = express.Router();
 
-// ✅ IMPORTANT: Allow drivers to view buses (needed for BusSchedule)
-// Get all buses - Allow admin, accountant, and driver to view
-router.get('/', authenticate, authorize('admin', 'accountant', 'driver'), listBusesController);
+// ==========================================
+// BUS ROUTES
+// ==========================================
 
-// Get bus by ID - Allow admin, accountant, and driver to view
-router.get('/:id', authenticate, authorize('admin', 'accountant', 'driver'), getBusController);
+// Get all buses (Admin/Accountant)
+router.get('/',
+  authenticate,
+  authorize('admin', 'accountant'),
+  listBusesController
+);
 
-// Create bus - Admin only
-router.post('/', authenticate, authorize('admin'), validate(createBusSchema), createBusController);
+// Get bus by ID
+router.get('/:id',
+  authenticate,
+  getBusController
+);
 
-// Update bus (PUT) - Admin only
-router.put('/:id', authenticate, authorize('admin'), validate(updateBusSchema), updateBusController);
+// Create a new bus (Admin only)
+router.post('/',
+  authenticate,
+  authorize('admin'),
+  createBusController
+);
 
-// Delete bus - Admin only
-router.delete('/:id', authenticate, authorize('admin'), deleteBusController);
+// Update a bus (Admin only)
+router.put('/:id',
+  authenticate,
+  authorize('admin'),
+  updateBusController
+);
+
+// Delete a bus (Admin only)
+router.delete('/:id',
+  authenticate,
+  authorize('admin'),
+  deleteBusController
+);
 
 export default router;
